@@ -7,6 +7,7 @@ import TabBar from './components/TabBar';
 import StatusBar from './components/StatusBar';
 import SearchDialog from './components/SearchDialog';
 import Welcome from './components/Welcome';
+import FolderHome from './components/FolderHome';
 import InputDialog from './components/InputDialog';
 import Toolbar from './components/Toolbar';
 import CodeView from './components/CodeView';
@@ -212,6 +213,19 @@ export default function App() {
     setSidebarOpen(true);
     setSidebarMode('files');
     api.setSettings({ lastOpenedFolder: folderPath });
+  }, []);
+
+  // 关闭文件夹：清空树与缓存，主区回到 Welcome 初始态。
+  // 侧栏保持打开（FileTree 的空态自带「打开文件夹」按钮，用户可直接换一个文件夹）。
+  const closeFolder = useCallback(() => {
+    setFolderRoot(null);
+    setFileTree([]);
+    setChildrenMap({});
+    setExpanded(new Set());
+    // AI 的「整个文件夹」作用域已失效，退回当前文档，避免继续引用已关闭的根目录
+    setAiScope((prev) => (prev === 'folder' ? 'doc' : prev));
+    aiFolderDocsCacheRef.current = { key: null, files: [] };
+    api.setSettings({ lastOpenedFolder: null });
   }, []);
 
   // 按路径智能打开：文件→右侧 tab；目录→打开文件夹
@@ -1276,14 +1290,24 @@ export default function App() {
           )}
 
           {tabs.length === 0 ? (
-            <Welcome
-              recentFiles={recentFiles}
-              onOpenRecent={openPath}
-              onNewFile={newTab}
-              onOpenFile={openFileDialog}
-              onOpenFolder={openFolderDialog}
-              onClearRecent={async () => setRecentFiles(await api.clearRecentFiles())}
-            />
+            folderRoot ? (
+              // 文件夹已打开：不再显示 新建/打开 等冷启动入口，改而反映当前文件夹状态
+              <FolderHome
+                folderPath={folderRoot}
+                fileCount={fileTree.length}
+                onReveal={() => revealPath(folderRoot)}
+                onCloseFolder={closeFolder}
+              />
+            ) : (
+              <Welcome
+                recentFiles={recentFiles}
+                onOpenRecent={openPath}
+                onNewFile={newTab}
+                onOpenFile={openFileDialog}
+                onOpenFolder={openFolderDialog}
+                onClearRecent={async () => setRecentFiles(await api.clearRecentFiles())}
+              />
+            )
           ) : (
             <div className="editor-wrap">
               {activeTab.kind !== 'code' && (

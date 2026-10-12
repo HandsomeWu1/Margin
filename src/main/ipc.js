@@ -6,6 +6,7 @@ const fileService = require('./file-service');
 const { exportHtml, exportPdf } = require('./export-service');
 const { settingsStore } = require('./store');
 const aiService = require('./ai-service');
+const { openExternal } = require('./external-link');
 
 const MARKDOWN_FILTERS = [{ name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'txt'] }];
 
@@ -178,6 +179,13 @@ function registerIpc() {
   ipcMain.handle('app:confirm-close', (e) => {
     const win = getWin(e);
     if (win && !win.isDestroyed()) win.destroy();
+  });
+
+  // ---------- 外部链接 ----------
+  // 由渲染层主动调用（编辑器正文的 Cmd/Ctrl+单击走这条，因为 contenteditable 内
+  // 浏览器本就不会跳转）。URL 视作不可信输入，协议白名单在 openExternal 内校验。
+  ipcMain.handle('app:open-external', (_e, url) => {
+    return { ok: openExternal(url) };
   });
 
   // ---------- AI ----------

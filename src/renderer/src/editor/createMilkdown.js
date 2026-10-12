@@ -32,6 +32,8 @@ import { fontSizeMark } from './fontSizeMark';
 import { linkInputRule } from './linkInputRule';
 import { linkBackspace } from './linkBackspace';
 import { linkEnterRule } from './linkEnterRule';
+import { linkClick } from './linkClick';
+import { linkCursorHint } from './linkCursorHint';
 import { nord } from '@milkdown/theme-nord';
 import '@milkdown/theme-nord/style.css';
 import '@milkdown/kit/prose/view/style/prosemirror.css';
@@ -147,6 +149,8 @@ export function createMilkdown(root, { defaultValue = '', onMarkdownUpdated, onS
     .use(linkInputRule)
     .use(linkBackspace)
     .use(linkEnterRule)
+    .use(linkClick)
+    .use(linkCursorHint)
     // 公式：remark 解析 + katex 配置 + 行内 schema 来自 plugin-math，
     // 行间 schema 与全部输入规则用自己的实现（修正 $$...$$ 被提前识别成行内公式的问题）
     .use([remarkMathPlugin, katexOptionsCtx, mathInlineSchema].flat())

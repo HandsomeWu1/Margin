@@ -68,6 +68,11 @@ export function installMockApi() {
     setWindowTitle: async () => {},
     setDocumentEdited: async () => {},
     confirmAppClose: async () => {},
+    // 浏览器预览没有主进程，用新标签页模拟「系统浏览器打开」
+    openExternal: async (url) => {
+      if (typeof url === 'string' && /^https?:\/\//i.test(url)) window.open(url, '_blank', 'noopener');
+      return { ok: true };
+    },
     onBeforeClose: () => noopUnsub,
     onMenu: () => noopUnsub,
     onOpenFile: () => noopUnsub,

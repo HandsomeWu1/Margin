@@ -1,9 +1,10 @@
 'use strict';
-const { app, BrowserWindow, shell, nativeTheme } = require('electron');
+const { app, BrowserWindow, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { buildMenu } = require('./menu');
 const { registerIpc } = require('./ipc');
+const { openExternal } = require('./external-link');
 const { settingsStore } = require('./store');
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -80,11 +81,19 @@ function createWindow() {
   // macOS 上使用系统自带的拼写检查器（自动检测语言），无需手动调用 setSpellCheckerLanguages。
   // （setSpellCheckerLanguages 是同步方法、在 macOS 上是 no-op，之前误写成 .catch() 导致启动崩溃。）
 
-  // 安全加固：禁止页面导航离开应用、禁止 window.open / webview
-  mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
+  // 安全加固：禁止页面导航离开应用、禁止 window.open / webview。
+  // 但只读区域（如 AI 面板用 innerHTML 渲染的回复）里的链接是真链接、点击会触发导航，
+  // 一律拦掉会导致「点了没反应」，因此 http/https 外链改由系统浏览器打开。
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    // 开发模式下 Vite 的整页刷新会导航到 dev server 地址，这是应用自身的地址：
+    // 必须放行（否则热更新整页刷新失效），更不能当成外链弹到系统浏览器。
+    if (DEV_URL && url.startsWith(DEV_URL)) return;
+    event.preventDefault();
+    openExternal(url);
+  });
   mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//.test(url)) shell.openExternal(url);
+    openExternal(url);
     return { action: 'deny' };
   });
 

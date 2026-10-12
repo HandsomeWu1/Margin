@@ -10,6 +10,8 @@
 - **所见即所得 Markdown 编辑**：基于 Milkdown（ProseMirror），支持 CommonMark + GFM（标题、列表、任务列表、表格、删除线、代码块、引用、链接、图片、分割线等），输入即渲染。
 - **侧栏文件树**：打开文件夹后浏览目录，点击打开 `.md/.markdown/.mdown/.txt` 文件；也支持把文件/文件夹**拖进窗口直接打开**（拖到正文区，目录会展开为侧栏树、文件会新建标签）。
 - **大纲（TOC）**：侧栏切换「大纲」标签，展示文档标题结构，点击跳转。
+- **打开文件夹后的主区状态**：打开文件夹但尚未打开任何文件时，主区不再显示「新建 / 打开」等冷启动入口，改为展示当前文件夹的名称、完整路径与操作指引，并提供「在 Finder 中显示 / 关闭文件夹」。
+- **链接跳转**：正文中的链接用 `Cmd`（macOS）/ `Ctrl` + 单击以系统浏览器打开，按住修饰键时链接光标变为手型提示；AI 回复等只读区域的链接直接单击即可打开。
 - **明暗主题**：`Cmd+Shift+L` 或标题栏/状态栏按钮切换，自动持久化。
 - **多标签页**：标签栏切换/关闭/新建，未保存标签显示圆点。
 - **自动保存**：有路径的文件编辑后自动写盘（约 0.8s 防抖）。
@@ -89,7 +91,9 @@ Margin/
     │   ├── file-service.js     # 文件读写 + 授权模型
     │   ├── export-service.js   # HTML/PDF 导出
     │   ├── ai-service.js       # AI 请求（OpenAI 兼容 + SSE 流式 + 取消）
-    │   └── store.js            # 设置/最近文件持久化
+    │   ├── external-link.js    # 外链协议白名单 + 交系统浏览器打开
+    │   ├── store.js            # 设置/最近文件持久化
+    │   └── assets/             # 开发期 Dock 图标等资源
     ├── preload/index.js        # contextBridge 白名单 API
     └── renderer/               # React 渲染层
         ├── index.html
@@ -99,16 +103,46 @@ Margin/
             ├── main.jsx        # 入口（含浏览器预览 mock API）
             ├── mockApi.js      # 非 Electron 环境的内存版 API
             ├── editor/         # Milkdown 集成
-            │   ├── createMilkdown.js  # 编辑器工厂（插件装配）
-            │   ├── Editor.jsx         # React 封装
-            │   ├── diffHighlight.js   # AI 改动标注（decoration）
-            │   ├── mermaidPreview.js  # Mermaid SVG 预览
-            │   ├── modes.js           # Focus/Typewriter 模式
-            │   └── slashMenu.js       # 斜杠命令菜单
+            │   ├── createMilkdown.js   # 编辑器工厂（插件装配）
+            │   ├── Editor.jsx          # React 封装
+            │   ├── commands.js         # 格式命令（加粗/标题/列表…）
+            │   ├── selection.js        # 选区与当前格式状态读取
+            │   ├── linkInputRule.js    # 输入 [text](url) 自动成链接
+            │   ├── linkBackspace.js    # 链接末尾退格还原为 Markdown 源码
+            │   ├── linkEnterRule.js    # 同上（中文输入法组字兜底）
+            │   ├── linkClick.js        # Cmd/Ctrl+单击用浏览器打开
+            │   ├── linkCursorHint.js   # 按住 Cmd/Ctrl 时链接光标变手型
+            │   ├── taskListToggle.js   # 任务列表 checkbox 点击切换
+            │   ├── tableSignal.js      # 表格状态信号
+            │   ├── searchHighlight.js  # 查找命中高亮
+            │   ├── diffHighlight.js    # AI 改动标注（decoration）
+            │   ├── mathRules.js        # KaTeX 行内/行间公式与输入规则
+            │   ├── mermaidPreview.js   # Mermaid SVG 预览
+            │   ├── modes.js            # Focus / Typewriter 模式
+            │   ├── slashMenu.js        # 斜杠命令菜单
+            │   ├── fontSizeMark.js     # 字号 mark（局部字号）
+            │   ├── headingBackspace.js # 标题行首退格降级为正文
+            │   ├── codeBlockLanguage.js   # 代码块语言切换
+            │   ├── codeBlockEnter.js      # 代码块内回车
+            │   └── codeBlockBackspace.js  # 代码块行首退格
             ├── components/     # UI 组件
-            ├── hooks/          # useAiChat（按文档隔离的 AI 会话）
+            │   ├── TitleBar.jsx / TabBar.jsx / Sidebar.jsx
+            │   ├── FileTree.jsx        # 侧栏文件树（含右键菜单）
+            │   ├── FolderHome.jsx      # 已打开文件夹、未开文件时的主区状态
+            │   ├── Welcome.jsx         # 冷启动欢迎页（新建/打开/最近）
+            │   ├── Toolbar.jsx / TablePicker.jsx / TableFloatingToolbar.jsx
+            │   ├── AiPanel.jsx / AiSettingsDialog.jsx / SelectionAiMenu.jsx / ModelIcon.jsx
+            │   ├── SearchDialog.jsx / Outline.jsx / StatusBar.jsx
+            │   ├── CodeView.jsx / DiffConfirmBar.jsx / InputDialog.jsx
+            │   └── highlight.js        # 代码块高亮装配
+            ├── hooks/
+            │   └── useAiChat.js        # 按文档隔离的 AI 会话
             ├── utils/          # 大纲/字数/导出/块级 diff/AI 提示词与用量
-            └── styles/         # 主题与样式
+            │   ├── markdown.js / export.js / blockDiff.js
+            │   ├── aiMarkdown.js / aiPrompt.js / aiUsage.js
+            │   └── settings.js
+            └── styles/
+                └── global.css          # 主题变量与全部样式
 ```
 
 ## 环境要求
@@ -156,7 +190,7 @@ npm run dev
 
 - `contextIsolation: true`、`nodeIntegration: false`、`sandbox: true`，渲染层仅能通过 `preload` 暴露的白名单 `window.api` 与主进程通信。
 - **路径授权模型**：渲染层只能读写用户通过「打开文件 / 打开文件夹」显式授权的路径，任意路径访问会被主进程拒绝，防止渲染层被劫持后越权访问磁盘。
-- CSP 限制脚本/资源来源；禁用页面导航、`window.open` 与 webview；导出时关闭 markdown-it 的 raw HTML 透传（防 XSS）。
+- CSP 限制脚本/资源来源；**禁止应用内导航**（`will-navigate` 一律阻止）、禁止 `window.open` 与 webview——其中 `http/https` 外链改由系统默认浏览器打开，协议白名单集中在 `src/main/external-link.js`（只放行 http/https，用 `URL` 解析而非正则前缀匹配，杜绝 `javascript:` / `data:` / `file:` 等）；导出时关闭 markdown-it 的 raw HTML 透传（防 XSS）。
 - 密钥/凭据一律走环境变量，不入库。
 
 ## 已知限制与后续规划
@@ -166,4 +200,5 @@ npm run dev
 - 标签切换会重建编辑器实例，跨标签的撤销历史不保留。
 - Mermaid 图表以代码块下方的 SVG 预览呈现，代码块本身可继续编辑（非专用图形节点）。
 - Emoji 渲染为原生字符（非彩色 twemoji），为规避 CSP 拦截与外部 CDN 依赖的取舍。
+- 打开文件夹后主区切换为文件夹状态，此时不再显示「最近打开」列表；点主区的「关闭文件夹」即可回到欢迎页。
 - 规划中：脚注、目录索引、命令面板、PDF 高级选项、图片粘贴的相对路径引用、签名与公证 CI。

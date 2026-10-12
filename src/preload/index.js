@@ -34,6 +34,9 @@ const api = {
   addRecentFile: (p) => ipcRenderer.invoke('app:add-recent', p),
   clearRecentFiles: () => ipcRenderer.invoke('app:clear-recent'),
 
+  // 外部链接：交给系统默认浏览器打开（主进程侧只放行 http/https）
+  openExternal: (url) => ipcRenderer.invoke('app:open-external', url),
+
   // 窗口
   setWindowTitle: (title) => ipcRenderer.invoke('window:set-title', title),
   setDocumentEdited: (edited) => ipcRenderer.invoke('window:set-edited', edited),

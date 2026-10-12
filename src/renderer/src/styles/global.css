@@ -672,6 +672,12 @@ body {
 .editor-container .milkdown a:hover {
   text-decoration: underline;
 }
+/* 按住 Cmd/Ctrl 时链接变手型，提示「此时单击会用浏览器打开」。
+   类名由 linkCursorHint 插件加在 ProseMirror 根节点上，抬起修饰键后移除。 */
+.editor-container .link-hotkey-active a,
+.editor-container .link-hotkey-active a * {
+  cursor: pointer;
+}
 .editor-container .milkdown code {
   font-family: var(--mono-font);
   font-size: 0.86em;
@@ -886,6 +892,65 @@ body {
 .welcome-actions button.primary:hover {
   opacity: 0.85;
 }
+/* ===== 已打开文件夹、未打开任何文件时的主区占位 ===== */
+/* 布局与 .welcome 保持一致（中间偏上、顶部不裁切），只换内容。 */
+.folder-home {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: clamp(24px, 14vh, 140px) 16px 24px;
+  background: var(--bg);
+  overflow-y: auto;
+}
+.folder-home-inner {
+  text-align: center;
+  max-width: 560px;
+  padding: 40px 32px;
+}
+.folder-home-name {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--heading);
+  line-height: 1.2;
+  margin-bottom: 8px;
+  /* 文件夹名过长时省略，完整路径由下方 .folder-home-path 兜底 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.folder-home-path {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-family: var(--mono-font);
+  margin-bottom: 28px;
+  word-break: break-all;
+}
+.folder-home-hint {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  margin-bottom: 30px;
+}
+.folder-home-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.folder-home-actions button {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13.5px;
+  transition: background 0.12s ease;
+}
+.folder-home-actions button:hover {
+  background: var(--bg-hover);
+}
+
 .welcome-recent {
   text-align: left;
 }
@@ -2286,6 +2351,15 @@ body {
   padding: 0.1em 0.9em;
   color: var(--text-secondary);
   border-left: 2px solid var(--quote-border);
+}
+/* AI 回复里的链接：非可编辑区，普通单击即可跳转（主进程 will-navigate 会转交系统浏览器） */
+.ai-md a {
+  color: var(--link);
+  text-decoration: none;
+  cursor: pointer;
+}
+.ai-md a:hover {
+  text-decoration: underline;
 }
 .ai-md table {
   border-collapse: collapse;
