@@ -9,6 +9,7 @@ import { getActiveFormats } from './selection';
 import { searchHighlightKey, setSearchQuery } from './searchHighlight';
 import { diffHighlightKey, diffToRanges, topLevelKeys } from './diffHighlight';
 import { diffBlocks } from '../utils/blockDiff';
+import { normalizeMathDelimiters } from '../utils/normalizeMath';
 import TableFloatingToolbar from '../components/TableFloatingToolbar';
 
 function runWithView(editor, fn) {
@@ -139,7 +140,7 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
       },
       setMarkdown: (md) => {
         const ed = getRef.current();
-        if (ed) ed.action(replaceAllAction(md || ''));
+        if (ed) ed.action(replaceAllAction(normalizeMathDelimiters(md || '')));
       },
       // 读取当前选区的 Markdown 源码，供 AI 只改写选中片段。
       // 选区跨越块边界时 slice 的 openStart/openEnd 不为 0，直接塞进 topNode 可能
@@ -197,7 +198,7 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
           const { from, to, empty } = state.selection;
           if (empty || from === to) return;
           const parser = ctx.get(parserCtx);
-          const doc = parser(md || '');
+          const doc = parser(normalizeMathDelimiters(md || ''));
           if (!doc) return;
           view.dispatch(state.tr.replaceWith(from, to, doc.content).scrollIntoView());
           done = true;
@@ -239,7 +240,7 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
             // 位置越界说明文档已被改动过，宁可失败也不能写错地方。
             if (range.from < 0 || range.to > size || range.from >= range.to) return;
             const parser = ctx.get(parserCtx);
-            const doc = parser(md || '');
+            const doc = parser(normalizeMathDelimiters(md || ''));
             if (!doc) return;
 
             // 插入粒度要与选区所处的层级匹配，否则会撑出多余的空段落：
@@ -257,7 +258,7 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
             written = true;
           });
         } else {
-          ed.action(replaceAllAction(md || ''));
+          ed.action(replaceAllAction(normalizeMathDelimiters(md || '')));
           written = true;
         }
         if (!written) return fail;

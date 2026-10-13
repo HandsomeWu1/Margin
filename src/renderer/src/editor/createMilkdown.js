@@ -29,6 +29,7 @@ import { codeBlockBackspace } from './codeBlockBackspace';
 import { headingBackspace } from './headingBackspace';
 import { codeBlockEnter } from './codeBlockEnter';
 import { fontSizeMark } from './fontSizeMark';
+import { normalizeMathDelimiters } from '../utils/normalizeMath';
 import { linkInputRule } from './linkInputRule';
 import { linkBackspace } from './linkBackspace';
 import { linkEnterRule } from './linkEnterRule';
@@ -116,7 +117,9 @@ export function createMilkdown(root, { defaultValue = '', onMarkdownUpdated, onS
   return Editor.make()
     .config((ctx) => {
       ctx.set(rootCtx, root);
-      ctx.set(defaultValueCtx, defaultValue);
+      // 载入前把 \(...\) / \[...\] 归一化为 remark-math 能识别的 $...$ / $$...$$，
+      // 否则外部导入的 LaTeX 公式文档整篇不渲染。
+      ctx.set(defaultValueCtx, normalizeMathDelimiters(defaultValue));
       ctx.update(uploadConfig.key, (prev) => ({ ...prev, uploader: localImageUploader }));
       configureSlash(ctx);
       if (onMarkdownUpdated) {
