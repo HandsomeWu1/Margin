@@ -529,8 +529,18 @@ export default function App() {
           const treeRes = await api.listTree(dir);
           if (treeRes.ok) setFileTree(treeRes.tree || []);
         }
-        // 关闭被删除文件的标签
-        setTabs((prev) => prev.filter((t) => t.path !== p));
+        // 关闭被删除文件（若是文件夹，则含其下所有文件）的标签。
+        // 必须同步修正 activeTabId：若删的是当前激活标签，activeTab 会悬空，
+        // 渲染时 activeTab.kind 抛异常导致整窗白屏。
+        const isDeleted = (tPath) =>
+          !!tPath && (tPath === p || (isDir && tPath.startsWith(p + '/')));
+        const remaining = tabsRef.current.filter((t) => !isDeleted(t.path));
+        setTabs(remaining);
+        if (activeTabIdRef.current && !remaining.some((t) => t.id === activeTabIdRef.current)) {
+          const idx = tabsRef.current.findIndex((t) => t.id === activeTabIdRef.current);
+          const nextActive = remaining[Math.min(idx, remaining.length - 1)];
+          setActiveTabId(nextActive ? nextActive.id : null);
+        }
       }
     },
     [folderRoot, loadChildren]
