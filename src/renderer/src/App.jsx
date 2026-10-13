@@ -1394,7 +1394,7 @@ export default function App() {
           />
         )}
 
-        {/* 选区浮动 AI 菜单：选中文本时出现在选区上方，提供改写/翻译/生成图表等快捷动作 */}
+        {/* 选区浮动 AI 菜单：选中文本后右键触发，提供润色/扩写/翻译/生成图表等快捷动作 */}
         <SelectionAiMenu
           rect={aiSelMenu && aiConfigured ? aiSelMenu : null}
           onAction={(preset) => {

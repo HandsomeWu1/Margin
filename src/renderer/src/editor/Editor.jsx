@@ -26,9 +26,6 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
   onSelectionChangeRef.current = onSelectionChange;
   const onSelectionRectRef = useRef(onSelectionRectChange);
   onSelectionRectRef.current = onSelectionRectChange;
-  // 浮动 AI 菜单的定位防抖：拖动选区过程中选区不断变化，等停下（松开鼠标/键盘停顿）再显示，
-  // 避免选中过程中菜单一直抖动/提前出现。
-  const selectionRectTimerRef = useRef(null);
   const initialValueRef = useRef(initialValue);
   const [pmView, setPmView] = useState(null);
 
@@ -46,29 +43,12 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
             if (onSelectionChangeRef.current) {
               onSelectionChangeRef.current(getActiveFormats(ctx));
             }
-            // 选区矩形：供浮动 AI 菜单定位。折叠 / 空选区时立即隐藏菜单。
+            // 选区折叠（点击别处 / 方向键收起）时，收起 AI 选区菜单。
+            // 菜单本身改为「选中后右键」触发（见 handleEditorContextMenu），不再自动弹出。
             const view = ctx.get(editorViewCtx);
-            if (!view) return;
-            const { from, to, empty } = view.state.selection;
-            if (empty || from === to) {
-              clearTimeout(selectionRectTimerRef.current);
-              if (onSelectionRectRef.current) onSelectionRectRef.current(null);
-              return;
+            if (view && view.state.selection.empty && onSelectionRectRef.current) {
+              onSelectionRectRef.current(null);
             }
-            // 拖动选区时本回调会频繁触发，用防抖等选区稳定后再显示：
-            // 鼠标拖动中每次变化都重置计时器，松开后才真正计算并定位。
-            clearTimeout(selectionRectTimerRef.current);
-            selectionRectTimerRef.current = setTimeout(() => {
-              try {
-                const a = view.coordsAtPos(from);
-                const b = view.coordsAtPos(to);
-                const left = Math.round((a.left + b.left) / 2);
-                const top = Math.round(Math.min(a.top, b.top));
-                if (onSelectionRectRef.current) onSelectionRectRef.current({ left, top });
-              } catch {
-                if (onSelectionRectRef.current) onSelectionRectRef.current(null);
-              }
-            }, 200);
           });
         },
       }),
@@ -80,9 +60,6 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
   // 重新 view.focus()，抢走重命名等输入框的焦点）。
   const getRef = useRef(get);
   getRef.current = get;
-
-  // 卸载时取消未触发的浮动菜单定位计时器，避免回调落到已销毁的编辑器上。
-  useEffect(() => () => clearTimeout(selectionRectTimerRef.current), []);
 
   // 编辑器异步创建完成后自动聚焦，确保新建/切换标签后光标可见。
   // 只依赖 loading：编辑器仅在创建完成（loading 由 true→false）时聚焦一次。
@@ -127,6 +104,26 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
         const pos = coords ? coords.pos : doc.content.size;
         view.dispatch(view.state.tr.setSelection(TextSelection.near(doc.resolve(pos), 1)));
       });
+    },
+    []
+  );
+
+  // 右键触发 AI 选区菜单：仅当存在非空选区时才弹出（否则不拦截，保持原有右键行为）。
+  // 弹出位置取鼠标右键点，避免像之前那样「选中即弹、还贴着指针」造成误触。
+  const handleEditorContextMenu = useCallback(
+    (e) => {
+      const ed = getRef.current();
+      if (!ed) return;
+      let hasSelection = false;
+      ed.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        if (view && !view.state.selection.empty) hasSelection = true;
+      });
+      if (!hasSelection) return;
+      e.preventDefault();
+      if (onSelectionRectRef.current) {
+        onSelectionRectRef.current({ left: e.clientX, top: e.clientY });
+      }
     },
     []
   );
@@ -334,7 +331,7 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
   );
 
   return (
-    <div className="editor-click-area" onClick={handleContainerClick}>
+    <div className="editor-click-area" onClick={handleContainerClick} onContextMenu={handleEditorContextMenu}>
       <Milkdown />
       {pmView && <TableFloatingToolbar view={pmView} />}
     </div>

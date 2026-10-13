@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, useEffect } from 'react';
 
 // 选区浮动 AI 菜单的快捷动作。结果只作为「对话回复」展示在 AI 面板里，不直接改写文档——
 // 因此指令要求模型以回复形式给出内容（不要用 %%REWRITE%% 改写标记）。
@@ -39,8 +39,8 @@ export const AI_SELECTION_PRESETS = [
 
 export default function SelectionAiMenu({ rect, onAction, onClose }) {
   const menuRef = useRef(null);
-  // 钳制到视口内：选中文本在边缘时，菜单可能超出界面导致看不到 / 点不到。
-  // useLayoutEffect 在绘制前同步计算，避免先闪到越界位置。
+  // rect 现在表示「触发点」（右键的 clientX/clientY）。钳制到视口内并向右下偏移一点，
+  // 避免菜单正好压在指针下造成误触。useLayoutEffect 在绘制前同步计算，避免先闪到越界位置。
   const [pos, setPos] = useState(rect);
   useLayoutEffect(() => {
     if (!rect) {
@@ -53,25 +53,29 @@ export default function SelectionAiMenu({ rect, onAction, onClose }) {
       return;
     }
     const m = el.getBoundingClientRect();
-    const gap = 4; // 菜单与选区之间的间距
     const margin = 8;
+    const offset = 10; // 与指针保持的距离
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    let left = rect.left;
-    // 默认在选区**下方**弹出；下方空间不足时翻到上方。
-    let top = rect.bottom + gap;
-    if (top + m.height > vh - margin) {
-      // 下方放不下：翻到选区上方
-      top = rect.top - m.height - gap;
-    }
-    // 水平：右溢出则左移；仍放不下则贴左边界。
-    if (left + m.width > vw - margin) left = Math.max(margin, vw - margin - m.width);
+    let left = rect.left + offset;
+    let top = rect.top + offset;
+    // 右/下溢出时反向弹出；再不够就贴边，保证完整可见
+    if (left + m.width > vw - margin) left = Math.max(margin, rect.left - m.width - offset);
+    if (top + m.height > vh - margin) top = Math.max(margin, rect.top - m.height - offset);
     if (left < margin) left = margin;
-    // 垂直最终钳制：极端情况（视口太矮）至少不截断。
     if (top < margin) top = margin;
-    if (top + m.height > vh - margin) top = vh - margin - m.height;
     setPos({ left, top });
   }, [rect]);
+
+  // 点击菜单外部（正文、侧栏、标题栏等）时关闭，避免右键弹出后一直挂着。
+  useEffect(() => {
+    if (!rect) return;
+    const onDown = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) onClose();
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [rect, onClose]);
 
   if (!rect) return null;
   const menu = (
