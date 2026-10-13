@@ -61,8 +61,9 @@ function listTree(root) {
       })
       .sort((a, b) => {
         if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
-        // 不指定 locale，避免部分环境 ICU 不支持 zh-Hans-CN 导致 RangeError
-        return a.name.localeCompare(b.name);
+        // 自然排序：数字按数值比较（1 < 2 < 10），而非字符串字典序（1 < 10 < 2）。
+        // 仍不指定 locale，避免部分环境 ICU 不支持特定语言标签导致 RangeError。
+        return a.name.localeCompare(b.name, undefined, { numeric: true });
       });
   } catch (err) {
     console.error('[file-service] listTree 处理失败:', root, '-', err && err.stack ? err.stack : err);
