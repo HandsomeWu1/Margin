@@ -327,6 +327,26 @@ export function useAiChat({
     [doSend, getTabId, setScope]
   );
 
+  // 「引用」：把选中文本以引用块形式放进当前文档会话的输入框（不发送）。
+  // 用户随后在引用基础上继续输入问题，按 Enter 发送，引用内容随用户消息一起提交。
+  const quote = useCallback(
+    (text) => {
+      const t = (text || '').trim();
+      if (!t) return;
+      if (setScope) setScope('doc');
+      const key = scopeSessionKey('doc', getTabId() || NO_DOC_KEY);
+      patchSession(key, (s) => {
+        const quoted = t
+          .split('\n')
+          .map((line) => (line.trim() ? `> ${line}` : '>'))
+          .join('\n');
+        const prev = (s.input || '').replace(/\s+$/, '');
+        return { input: (prev ? prev + '\n\n' : '') + quoted + '\n\n' };
+      });
+    },
+    [setScope, getTabId, patchSession]
+  );
+
   const stop = useCallback(() => {
     const scope = getScope ? getScope() : 'doc';
     const key = scopeSessionKey(scope, getTabId() || NO_DOC_KEY);
@@ -386,5 +406,5 @@ export function useAiChat({
   }, [aliveKey]);
 
   const current = sessions[scopeSessionKey(getScope ? getScope() : 'doc', getTabId() || NO_DOC_KEY)] || emptySession();
-  return { session: current, send, stop, setInput, clear, runPreset };
+  return { session: current, send, stop, setInput, clear, runPreset, quote };
 }

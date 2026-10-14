@@ -256,10 +256,21 @@ export default function AiPanel({
   getSelection,
   onOpenSettings,
   onClose,
+  focusToken,
 }) {
   const { messages, input, busy } = session;
   const [selectionInfo, setSelectionInfo] = useState({ empty: true, text: '' });
   const listRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // 「引用」等外部动作填入输入框后，把焦点交给输入框并定位到末尾，让用户接着提问。
+  useEffect(() => {
+    if (focusToken && inputRef.current) {
+      const el = inputRef.current;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }
+  }, [focusToken]);
   // 输入法组字状态。中文拼音输入法在候选未确认时按回车是「确认选字」，
   // 此时不能当成发送——否则打英文单词或选词时会把半成品直接发出去。
   const composingRef = useRef(false);
@@ -401,6 +412,7 @@ export default function AiPanel({
 
       <div className="ai-composer">
         <textarea
+          ref={inputRef}
           className="ai-input"
           rows={3}
           value={input}

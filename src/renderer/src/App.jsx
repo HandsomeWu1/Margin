@@ -60,6 +60,8 @@ export default function App() {
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
   // AI 作用域：'doc' 当前文档 | 'tabs' 已打开文件 | 'folder' 整个打开的文件夹
   const [aiScope, setAiScope] = useState('doc');
+  // 「引用」等操作填入 AI 输入框后，递增让面板聚焦输入框并定位到末尾
+  const [aiFocusToken, setAiFocusToken] = useState(0);
   // 选区浮动 AI 菜单的位置（视口坐标），null 表示隐藏
   const [aiSelMenu, setAiSelMenu] = useState(null);
   // 待确认的 AI 改动：{ tabId, snapshot, added, changed, removed, coarse }
@@ -1388,6 +1390,7 @@ export default function App() {
             onStop={ai.stop}
             onInputChange={ai.setInput}
             onClear={ai.clear}
+            focusToken={aiFocusToken}
             getSelection={aiGetSelection}
             onOpenSettings={() => setAiSettingsOpen(true)}
             onClose={() => setAiOpen(false)}
@@ -1406,6 +1409,15 @@ export default function App() {
             else if (cmd === 'cut') ed.cut();
             else if (cmd === 'paste') ed.paste();
             else if (cmd === 'selectAll') ed.selectAll();
+            setAiSelMenu(null);
+          }}
+          onQuote={() => {
+            // 「引用」：把选中文本作为引用块放进 AI 输入框（不发送），
+            // 打开面板并聚焦输入框，用户在此基础上继续提问。
+            const sel = editorRef.current?.getSelectionMarkdown?.() || { empty: true, text: '' };
+            setAiOpen(true);
+            if (!sel.empty) ai.quote(sel.text);
+            setAiFocusToken((n) => n + 1);
             setAiSelMenu(null);
           }}
           onAction={(preset) => {

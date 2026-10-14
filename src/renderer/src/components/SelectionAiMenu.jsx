@@ -45,7 +45,7 @@ const BASIC_ACTIONS = [
   { key: 'selectAll', label: '全选', needsSelection: false },
 ];
 
-export default function SelectionAiMenu({ rect, hasSelection, aiEnabled, onBasic, onAction, onClose }) {
+export default function SelectionAiMenu({ rect, hasSelection, aiEnabled, onBasic, onAction, onQuote, onClose }) {
   const menuRef = useRef(null);
   // rect 现在表示「触发点」（右键的 clientX/clientY）。钳制到视口内并向右下偏移一点，
   // 避免菜单正好压在指针下造成误触。useLayoutEffect 在绘制前同步计算，避免先闪到越界位置。
@@ -108,6 +108,9 @@ export default function SelectionAiMenu({ rect, hasSelection, aiEnabled, onBasic
       {hasSelection && aiEnabled && (
         <>
           <div className="ai-sel-sep" />
+          <button type="button" onClick={onQuote}>
+            引用
+          </button>
           {AI_SELECTION_PRESETS.map((p) => (
             <button key={p.key} type="button" onClick={() => onAction(p)}>
               {p.label}
