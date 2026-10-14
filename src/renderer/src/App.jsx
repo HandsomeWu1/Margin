@@ -1394,9 +1394,20 @@ export default function App() {
           />
         )}
 
-        {/* 选区浮动 AI 菜单：选中文本后右键触发，提供润色/扩写/翻译/生成图表等快捷动作 */}
+        {/* 编辑器右键菜单：基本编辑操作（复制/剪切/粘贴/全选）+ 选区 AI 快捷动作 */}
         <SelectionAiMenu
-          rect={aiSelMenu && aiConfigured ? aiSelMenu : null}
+          rect={aiSelMenu}
+          hasSelection={!!(aiSelMenu && aiSelMenu.hasSelection)}
+          aiEnabled={aiConfigured}
+          onBasic={(cmd) => {
+            const ed = editorRef.current;
+            if (!ed) return;
+            if (cmd === 'copy') ed.copy();
+            else if (cmd === 'cut') ed.cut();
+            else if (cmd === 'paste') ed.paste();
+            else if (cmd === 'selectAll') ed.selectAll();
+            setAiSelMenu(null);
+          }}
           onAction={(preset) => {
             // 选区 AI 菜单的预设（翻译/总结/润色…）只把结果作为「对话回复」展示在 AI 面板里，
             // 不直接改写文档；用户要落盘时需自行在对话框里说「改到文件里」，由模型输出改写标记再写入。

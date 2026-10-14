@@ -37,6 +37,10 @@ const api = {
   // 外部链接：交给系统默认浏览器打开（主进程侧只放行 http/https）
   openExternal: (url) => ipcRenderer.invoke('app:open-external', url),
 
+  // 剪贴板（编辑器右键菜单的复制/剪切/粘贴）
+  clipboardReadText: () => ipcRenderer.invoke('clipboard:read-text'),
+  clipboardWriteText: (text) => ipcRenderer.invoke('clipboard:write-text', text),
+
   // 窗口
   setWindowTitle: (title) => ipcRenderer.invoke('window:set-title', title),
   setDocumentEdited: (edited) => ipcRenderer.invoke('window:set-edited', edited),

@@ -1,5 +1,5 @@
 'use strict';
-const { ipcMain, dialog, BrowserWindow, nativeTheme, app } = require('electron');
+const { ipcMain, dialog, BrowserWindow, nativeTheme, app, clipboard } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const fileService = require('./file-service');
@@ -179,6 +179,15 @@ function registerIpc() {
   ipcMain.handle('app:confirm-close', (e) => {
     const win = getWin(e);
     if (win && !win.isDestroyed()) win.destroy();
+  });
+
+  // ---------- 剪贴板 ----------
+  // 编辑器右键菜单的复制/剪切/粘贴走这里。sandbox 渲染层无法直接访问系统剪贴板，
+  // readText 用同步方法（快、无副作用），writeText 校验后写入。
+  ipcMain.handle('clipboard:read-text', () => ({ text: clipboard.readText() }));
+  ipcMain.handle('clipboard:write-text', (_e, text) => {
+    if (typeof text === 'string') clipboard.writeText(text);
+    return {};
   });
 
   // ---------- 外部链接 ----------

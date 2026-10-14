@@ -4,7 +4,7 @@ import { createMilkdown } from './createMilkdown';
 import { getMarkdown as getMarkdownAction, replaceAll as replaceAllAction } from '@milkdown/kit/utils';
 import { editorViewCtx, serializerCtx, parserCtx } from '@milkdown/kit/core';
 import { undo, redo } from '@milkdown/kit/prose/history';
-import { TextSelection } from '@milkdown/prose/state';
+import { TextSelection, AllSelection } from '@milkdown/prose/state';
 import { getActiveFormats } from './selection';
 import { searchHighlightKey, setSearchQuery } from './searchHighlight';
 import { diffHighlightKey, diffToRanges, topLevelKeys } from './diffHighlight';
@@ -109,7 +109,7 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
     []
   );
 
-  // 右键触发 AI 选区菜单：仅当存在非空选区时才弹出（否则不拦截，保持原有右键行为）。
+  // 右键弹出编辑器菜单：有选区时包含 复制/剪切 + AI 快捷动作，无选区时也有 粘贴/全选。
   // 弹出位置取鼠标右键点，避免像之前那样「选中即弹、还贴着指针」造成误触。
   const handleEditorContextMenu = useCallback(
     (e) => {
@@ -120,10 +120,9 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
         const view = ctx.get(editorViewCtx);
         if (view && !view.state.selection.empty) hasSelection = true;
       });
-      if (!hasSelection) return;
       e.preventDefault();
       if (onSelectionRectRef.current) {
-        onSelectionRectRef.current({ left: e.clientX, top: e.clientY });
+        onSelectionRectRef.current({ left: e.clientX, top: e.clientY, hasSelection });
       }
     },
     []
@@ -142,6 +141,39 @@ const InnerEditor = forwardRef(function InnerEditor({ initialValue, onChange, on
         const ed = getRef.current();
         if (ed) ed.action(replaceAllAction(normalizeMathDelimiters(md || '')));
       },
+      // ---- 右键菜单基本操作：复制 / 剪切 / 粘贴 / 全选 ----
+      // sandbox 渲染层拿不到系统剪贴板，复制/剪切把选区文本写入剪贴板（经 IPC），
+      // 粘贴从剪贴板读纯文本插入（不支持富文本，够用且行为可预期）。
+      copy: () =>
+        runWithView(getRef.current(), (view) => {
+          const { from, to, empty } = view.state.selection;
+          if (empty) return;
+          const text = view.state.doc.textBetween(from, to, '\n');
+          window.api?.clipboardWriteText?.(text);
+        }),
+      cut: () =>
+        runWithView(getRef.current(), (view) => {
+          const { from, to, empty } = view.state.selection;
+          if (empty) return;
+          const text = view.state.doc.textBetween(from, to, '\n');
+          window.api?.clipboardWriteText?.(text);
+          view.dispatch(view.state.tr.deleteSelection().scrollIntoView());
+          view.focus();
+        }),
+      paste: async () => {
+        const res = await window.api?.clipboardReadText?.();
+        const text = (res && res.text) || '';
+        if (!text) return;
+        runWithView(getRef.current(), (view) => {
+          view.dispatch(view.state.tr.replaceSelection(view.state.schema.text(text)).scrollIntoView());
+          view.focus();
+        });
+      },
+      selectAll: () =>
+        runWithView(getRef.current(), (view) => {
+          view.dispatch(view.state.tr.setSelection(new AllSelection(view.state.doc)));
+          view.focus();
+        }),
       // 读取当前选区的 Markdown 源码，供 AI 只改写选中片段。
       // 选区跨越块边界时 slice 的 openStart/openEnd 不为 0，直接塞进 topNode 可能
       // 构造出非法文档，因此序列化失败时退回纯文本，保证功能不中断。

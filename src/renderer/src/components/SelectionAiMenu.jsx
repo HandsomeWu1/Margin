@@ -37,7 +37,15 @@ export const AI_SELECTION_PRESETS = [
   },
 ];
 
-export default function SelectionAiMenu({ rect, onAction, onClose }) {
+// 基本编辑操作：与平台习惯一致，右键菜单第一行放 复制/剪切/粘贴/全选。
+const BASIC_ACTIONS = [
+  { key: 'copy', label: '复制', needsSelection: true },
+  { key: 'cut', label: '剪切', needsSelection: true },
+  { key: 'paste', label: '粘贴', needsSelection: false },
+  { key: 'selectAll', label: '全选', needsSelection: false },
+];
+
+export default function SelectionAiMenu({ rect, hasSelection, aiEnabled, onBasic, onAction, onClose }) {
   const menuRef = useRef(null);
   // rect 现在表示「触发点」（右键的 clientX/clientY）。钳制到视口内并向右下偏移一点，
   // 避免菜单正好压在指针下造成误触。useLayoutEffect 在绘制前同步计算，避免先闪到越界位置。
@@ -85,11 +93,28 @@ export default function SelectionAiMenu({ rect, onAction, onClose }) {
       style={{ position: 'fixed', left: (pos || rect).left, top: (pos || rect).top }}
       onMouseDown={(e) => e.preventDefault()}
     >
-      {AI_SELECTION_PRESETS.map((p) => (
-        <button key={p.key} type="button" onClick={() => onAction(p)}>
-          {p.label}
-        </button>
-      ))}
+      <div className="ai-sel-basic">
+        {BASIC_ACTIONS.map((b) => (
+          <button
+            key={b.key}
+            type="button"
+            disabled={b.needsSelection && !hasSelection}
+            onClick={() => onBasic(b.key)}
+          >
+            {b.label}
+          </button>
+        ))}
+      </div>
+      {hasSelection && aiEnabled && (
+        <>
+          <div className="ai-sel-sep" />
+          {AI_SELECTION_PRESETS.map((p) => (
+            <button key={p.key} type="button" onClick={() => onAction(p)}>
+              {p.label}
+            </button>
+          ))}
+        </>
+      )}
     </div>
   );
   return createPortal(menu, document.body);

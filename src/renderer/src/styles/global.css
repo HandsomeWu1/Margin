@@ -2498,6 +2498,20 @@ body {
 .ai-sel-menu button:hover {
   background: var(--bg-hover);
 }
+.ai-sel-menu button:disabled {
+  color: var(--text-muted);
+  cursor: default;
+  opacity: 0.55;
+}
+.ai-sel-menu button:disabled:hover {
+  background: transparent;
+}
+/* 基本操作行（复制/剪切/粘贴/全选）与 AI 动作之间的分隔 */
+.ai-sel-sep {
+  width: 1px;
+  margin: 4px 3px;
+  background: var(--border);
+}
 .ai-scope {
   font-size: 11px;
   color: var(--text-muted);

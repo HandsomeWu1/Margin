@@ -73,6 +73,22 @@ export function installMockApi() {
       if (typeof url === 'string' && /^https?:\/\//i.test(url)) window.open(url, '_blank', 'noopener');
       return { ok: true };
     },
+    // 浏览器预览的剪贴板走 Web Clipboard API（权限不足时静默降级）
+    clipboardReadText: async () => {
+      try {
+        return { text: await navigator.clipboard.readText() };
+      } catch {
+        return { text: '' };
+      }
+    },
+    clipboardWriteText: async (text) => {
+      try {
+        if (typeof text === 'string') await navigator.clipboard.writeText(text);
+      } catch {
+        /* 忽略 */
+      }
+      return {};
+    },
     onBeforeClose: () => noopUnsub,
     onMenu: () => noopUnsub,
     onOpenFile: () => noopUnsub,
